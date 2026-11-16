@@ -1,0 +1,328 @@
+<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>英検2級単語トレーナー</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f4f6fb;color:#172033;font-family:system-ui,sans-serif}header{background:#172554;color:white;padding:18px}main{max-width:850px;margin:auto;padding:14px}nav{display:flex;gap:6px;overflow:auto;margin:8px 0 14px}button,.btn{border:0;border-radius:10px;padding:10px 13px;background:#e2e8f0;color:#172033;font-weight:650;cursor:pointer}button.on,.primary{background:#2563eb;color:white}.panel{display:none}.panel.on{display:block}.card{background:white;border:1px solid #e2e8f0;border-radius:16px;padding:16px;margin:10px 0}.muted{color:#64748b;font-size:13px}.big{font-size:28px;font-weight:800}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.stat{background:#eff6ff;border-radius:12px;padding:12px}.stat b{display:block;font-size:22px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}input,select,textarea{padding:10px;border:1px solid #cbd5e1;border-radius:10px;font:inherit;max-width:100%}input,textarea{width:100%}.bar{height:8px;background:#e2e8f0;border-radius:20px;overflow:hidden}.bar span{display:block;height:100%;background:#2563eb;width:0}.answer{display:block;width:100%;text-align:left;margin:7px 0;background:white;border:1px solid #cbd5e1}.item{padding:10px 0;border-bottom:1px solid #e2e8f0}.tag{font-size:11px;background:#e0e7ff;padding:4px 7px;border-radius:20px}.hide{display:none!important}@media(max-width:520px){main{padding:10px}}
+</style>
+<header><b>英検2級 Vocabulary Trainer</b><div class="muted" style="color:#cbd5e1">単語・熟語・苦手復習をまとめて管理</div></header><main>
+<nav id="nav"><button class="on" data-p="home">ホーム</button><button data-p="study">学習</button><button data-p="test">テスト</button><button data-p="list">単語一覧</button><button data-p="record">記録・設定</button></nav>
+<section id="home" class="panel on"><div class="card"><h3>今日の学習</h3><div class="grid"><div class="stat">今日の学習<b id="today">0</b></div><div class="stat">連続学習日数<b id="streak">0日</b></div><div class="stat">マスター済み<b id="master">0</b></div><div class="stat">登録語数<b id="total">0</b></div></div><p class="muted">目標 <b id="goalText">100</b> 語</p><div class="bar"><span id="goalBar"></span></div><div class="row" style="margin-top:12px"><button class="primary" onclick="study('all')">すべて</button><button onclick="study('new')">未マスター</button><button onclick="study('weak')">苦手</button><button onclick="study('master')">マスター復習</button><button onclick="study('random')">ランダム</button></div></div><div class="card"><b>マスター判定</b><p class="muted">同じ単語を3回連続で正解するとマスター済み。間違えると連続正解数は0に戻るよ。マスター済みを除外するモードと、復習するモードを選べます。</p><button class="primary" onclick="test(10)">10問テスト</button></div></section>
+<section id="study" class="panel"><div class="card"><div class="row" style="justify-content:space-between"><h3 id="mode">単語学習</h3><span id="pos" class="muted"></span></div><div class="bar"><span id="sbar"></span></div><div style="text-align:center;padding:25px 0"><div class="big" id="term">学習を始めよう</div><div class="muted" id="pron"></div><div id="back" class="hide"><h2 id="meaning"></h2><p id="example" class="muted"></p><p id="detail" class="muted"></p></div></div><div class="row"><button id="reveal" class="primary" onclick="reveal()">意味を見る</button><button onclick="speak()">発音</button><button id="know" class="hide" onclick="grade(true)">覚えた</button><button id="miss" class="hide" onclick="grade(false)">まだ覚えてない</button></div><p id="note" class="muted"></p></div></section>
+<section id="test" class="panel"><div class="card"><h3>ランダムテスト</h3><div class="row"><select id="num"><option>10</option><option>20</option><option>50</option><option>100</option></select><button class="primary" onclick="test()">テスト開始</button></div><div id="quiz" class="muted" style="margin-top:15px">登録語からランダムに出題します。</div></div></section>
+<section id="list" class="panel"><div class="card"><h3>単語一覧</h3><input id="search" placeholder="英語・日本語で検索" oninput="renderList()"><div class="row" style="margin:8px 0"><select id="filter" onchange="renderList()"><option value="all">すべて</option><option value="new">未マスター</option><option value="master">マスター済み</option><option value="weak">苦手</option><option value="due">復習予定</option></select><select id="cat" onchange="renderList()"><option value="all">全カテゴリ</option><option value="word">単語</option><option value="idiom">熟語</option></select></div><div id="listbody"></div></div></section>
+<section id="record" class="panel"><div class="card"><h3>学習記録</h3><div class="grid"><div class="stat">累計テスト<b id="sessions">0</b></div><div class="stat">正答率<b id="accuracy">--%</b></div><div class="stat">正解数<b id="correct">0</b></div><div class="stat">苦手語数<b id="weaknum">0</b></div></div><h3>今月の学習カレンダー</h3><div id="calendar" class="grid"></div></div><div class="card"><h3>目標・バックアップ</h3><label class="muted">1日の目標語数</label><input id="goal" type="number" min="5" max="500" value="100"><button onclick="saveGoal()">目標保存</button><p><button onclick="backup()">データを書き出す</button> <label class="btn">バックアップ読込<input type="file" accept=".json" hidden onchange="restore(event)"></label></p><p class="muted">記録はこのブラウザ内に保存されます。機種変更前にバックアップしてね。</p></div><div class="card" id="cloudSyncCard">
+<h3>Googleアカウントでクラウド同期</h3>
+<p class="muted">同じGoogleアカウントでログインすると、スマホ・タブレット間で学習記録を共有できます。</p>
+<div class="row">
+<button class="primary" id="googleLoginBtn" type="button">Googleでログイン・同期</button>
+<button id="cloudSyncBtn" type="button">今すぐ同期</button>
+<button id="googleLogoutBtn" type="button">ログアウト</button>
+</div>
+<p id="cloudStatus" class="muted">Firebaseの設定を確認しています…</p>
+</div>
+<div class="card"><h3>単語・熟語を追加</h3><input id="addterm" placeholder="英単語・熟語"><input id="addmean" placeholder="意味" style="margin-top:7px"><input id="addpron" placeholder="発音（任意）" style="margin-top:7px"><select id="addcat" style="margin-top:7px"><option value="word">単語</option><option value="idiom">熟語</option></select><textarea id="addex" placeholder="例文（任意）" style="margin-top:7px"></textarea><button class="primary" onclick="add()">追加</button></div></section>
+</main><script>
+const raw=[
+['achieve','達成する','verb','She achieved her goal.'],['affect','影響を与える','verb','Weather affects our lives.'],['allow','許可する','verb','The school allows students to use phones.'],['although','〜だけれども','conj','Although it rained, we went out.'],['amount','量','noun','The amount of waste is growing.'],['ancient','古代の','adj','We visited an ancient temple.'],['appear','現れる','verb','A rainbow appeared.'],['apply','申し込む・当てはまる','verb','I will apply for the program.'],['approach','取り組み・近づく','noun/verb','We need a new approach.'],['argue','議論する・主張する','verb','They argued about the plan.'],['avoid','避ける','verb','Avoid making the same mistake.'],['benefit','利益・恩恵','noun','Exercise has many benefits.'],['cause','原因・引き起こす','noun/verb','Pollution causes health problems.'],['challenge','課題・挑戦','noun','It was a difficult challenge.'],['compare','比較する','verb','Compare the two ideas.'],['concern','心配・関心','noun','This is a serious concern.'],['consider','よく考える','verb','Please consider my idea.'],['contain','含む','verb','The drink contains no sugar.'],['contribute','貢献する','verb','We can contribute to society.'],['create','創造する','verb','The project created jobs.'],['depend','〜次第である','verb','It depends on the weather.'],['develop','発展させる','verb','The town developed quickly.'],['environment','環境','noun','Protect the environment.'],['especially','特に','adv','This is especially important.'],['evidence','証拠','noun','There is no evidence.'],['experience','経験','noun/verb','She has teaching experience.'],['improve','改善する','verb','Practice improves your English.'],['increase','増加する','verb','Prices increased last year.'],['instead','その代わりに','adv','We walked instead.'],['involve','含む・関わらせる','verb','The job involves teamwork.'],['likely','ありそうな','adj','It is likely to rain.'],['manage','何とかやり遂げる','verb','He managed to finish.'],['method','方法','noun','This method is effective.'],['opportunity','機会','noun','It is a good opportunity.'],['provide','提供する','verb','They provide useful information.'],['reduce','減らす','verb','We must reduce plastic waste.'],['require','必要とする','verb','The task requires patience.'],['resource','資源','noun','Water is an important resource.'],['responsible','責任がある','adj','We are responsible for our actions.'],['significant','重要な・かなりの','adj','It had a significant effect.'],['solution','解決策','noun','We need a solution.'],['suggest','提案する','verb','I suggest taking the train.'],['support','支援する・支持','verb/noun','Parents support their children.'],['tend','〜する傾向がある','verb','People tend to use phones.'],['therefore','それゆえに','adv','Therefore, we left early.'],['various','さまざまな','adj','The shop sells various goods.'],['waste','むだ・廃棄物','noun/verb','Do not waste food.'],['available','利用できる','adj','The service is available.'],['economic','経済の','adj','The country has economic problems.'],
+['according to','〜によると','熟語','According to the news, it will rain.'],['as a result','その結果','熟語','As a result, sales rose.'],['at least','少なくとも','熟語','Wait at least ten minutes.'],['because of','〜が原因で','熟語','The game stopped because of rain.'],['be likely to','〜しそうである','熟語','Prices are likely to rise.'],['be responsible for','〜に責任がある','熟語','We are responsible for nature.'],['deal with','対処する','熟語','We deal with the problem.'],['depend on','〜次第である','熟語','It depends on your choice.'],['due to','〜が原因で','熟語','The delay was due to snow.'],['for example','例えば','熟語','For example, apples are healthy.'],['in addition','さらに','熟語','In addition, it saves time.'],['in fact','実際は','熟語','In fact, I was right.'],['in order to','〜するために','熟語','I study in order to pass.'],['instead of','〜の代わりに','熟語','Walk instead of driving.'],['make sure','確かめる','熟語','Make sure the door is locked.'],['take part in','〜に参加する','熟語','I took part in the event.'],['take care of','世話をする','熟語','She takes care of her dog.'],['thanks to','〜のおかげで','熟語','Thanks to you, I succeeded.'],['up to','最大〜まで・〜次第で','熟語','Up to 30 people can join.'],['in charge of','〜を担当して','熟語','He is in charge of the team.'],
+['adapt','適応する','verb','Animals adapt to changes in their environment.'],
+['admit','認める・入場を許可する','verb','He admitted that he was wrong.'],
+['advertise','宣伝する','verb','The company advertises its new product online.'],
+['afford','〜する余裕がある','verb','I cannot afford to buy a new computer.'],
+['agriculture','農業','noun','Agriculture is important to the local economy.'],
+['alternative','代わりのもの・代替案','noun/adj','We need an alternative source of energy.'],
+['analyze','分析する','verb','Scientists analyzed the results of the study.'],
+['announce','発表する','verb','The school announced the results yesterday.'],
+['anxiety','不安','noun','Exams can cause anxiety for some students.'],
+['appreciate','感謝する・正しく理解する','verb','I appreciate your kind advice.'],
+['appropriate','適切な','adj','Wear appropriate clothes for the event.'],
+['atmosphere','大気・雰囲気','noun','The Earth’s atmosphere protects life.'],
+['attract','引きつける','verb','The museum attracts many visitors.'],
+['average','平均・平均の','noun/adj','The average temperature is rising.'],
+['aware','気づいている','adj','People should be aware of the problem.'],
+['balance','バランス・釣り合い','noun/verb','It is important to balance study and rest.'],
+['behavior','行動・振る舞い','noun','Parents can influence children’s behavior.'],
+['belong','所属する','verb','This book belongs to my sister.'],
+['billion','10億','noun','The country has a population of over one billion.'],
+['border','国境・境界','noun','The river forms a border between the countries.'],
+['climate','気候','noun','The climate is changing around the world.'],
+['communicate','意思を伝える','verb','We communicate with friends online.'],
+['community','地域社会・共同体','noun','The community worked together to clean the park.'],
+['compete','競争する','verb','Many companies compete for customers.'],
+['complex','複雑な','adj','The issue is more complex than it seems.'],
+['consume','消費する','verb','People consume a lot of energy every day.'],
+['convenient','便利な','adj','Online shopping is convenient for busy people.'],
+['cooperate','協力する','verb','The two groups agreed to cooperate.'],
+['culture','文化','noun','Traveling helps us understand other cultures.'],
+['damage','損害・損害を与える','noun/verb','The storm damaged several houses.'],
+['debate','討論・討論する','noun/verb','Students had a debate about school rules.'],
+['decision','決定','noun','Making a decision can be difficult.'],
+['decline','減少する・断る','verb','The number of visitors declined.'],
+['demand','需要・要求する','noun/verb','Demand for electric cars is growing.'],
+['destroy','破壊する','verb','The fire destroyed the old building.'],
+['device','装置・機器','noun','This device can save energy.'],
+['disaster','災害','noun','The city prepared for a natural disaster.'],
+['discover','発見する','verb','Researchers discovered a new species.'],
+['disease','病気','noun','The disease can spread quickly.'],
+['distance','距離','noun','The distance between the towns is short.'],
+['education','教育','noun','Education gives people more opportunities.'],
+['effective','効果的な','adj','This is an effective way to learn vocabulary.'],
+['effort','努力','noun','Your effort will lead to progress.'],
+['elderly','高齢の人々','adj/noun','The town offers support for elderly people.'],
+['emergency','緊急事態','noun','Call this number in an emergency.'],
+['encourage','励ます・促す','verb','Teachers encourage students to ask questions.'],
+['energy','エネルギー','noun','Solar panels produce clean energy.'],
+['entire','全体の','adj','The entire town lost electricity.'],
+['establish','設立する・確立する','verb','The organization was established in 1998.'],
+['estimate','推定する・見積もり','verb/noun','Experts estimate the cost of the project.'],
+['eventually','最終的に','adv','Eventually, they found a solution.'],
+['exchange','交換する・交流','noun/verb','Students exchange ideas with one another.'],
+['exist','存在する','verb','Many different opinions exist.'],
+['expand','拡大する','verb','The company plans to expand its business.'],
+['factor','要因','noun','Cost is an important factor.'],
+['feature','特徴・特集する','noun/verb','The phone has a useful feature.'],
+['financial','財政の・金融の','adj','The family faced financial difficulties.'],
+['foreign','外国の','adj','Learning a foreign language takes time.'],
+['former','以前の','adj','The former teacher visited our school.'],
+['frequent','頻繁な','adj','Frequent exercise can improve health.'],
+['function','機能・機能する','noun/verb','This app has many useful functions.'],
+['global','世界的な','adj','Climate change is a global issue.'],
+['harmful','有害な','adj','Smoking is harmful to health.'],
+['identify','特定する・見分ける','verb','Can you identify the main cause?'],
+['impact','影響','noun','The decision had a major impact on society.'],
+['independent','独立した','adj','The country became independent.'],
+['individual','個人・個々の','noun/adj','Each individual has different needs.'],
+['industry','産業','noun','The tourism industry supports many jobs.'],
+['influence','影響・影響を与える','noun/verb','Friends can influence our choices.'],
+['inform','知らせる','verb','Please inform us of any changes.'],
+['issue','問題・論点','noun','Plastic waste is a serious issue.'],
+['maintain','維持する','verb','It is important to maintain good habits.'],
+['major','主要な・専攻する','adj/noun','Traffic is a major problem in the city.'],
+['material','材料・資料','noun','The material is easy to recycle.'],
+['mention','言及する','verb','She mentioned the new rule.'],
+['necessary','必要な','adj','Sleep is necessary for good health.'],
+['negative','否定的な・悪い','adj','The change had a negative effect.'],
+['notice','気づく・通知','verb/noun','I noticed a small mistake.'],
+['obtain','手に入れる','verb','You can obtain information from the website.'],
+['occur','起こる','verb','The accident occurred at night.'],
+['ordinary','普通の','adj','It was an ordinary day.'],
+['organize','計画する・整理する','verb','They organized a charity event.'],
+['participate','参加する','verb','Everyone can participate in the activity.'],
+['particular','特定の・特別な','adj','Is there a particular reason?'],
+['perform','行う・演じる','verb','The students performed a short play.'],
+['population','人口','noun','The population of the town is decreasing.'],
+['positive','前向きな・肯定的な','adj','Try to have a positive attitude.'],
+['prevent','防ぐ','verb','Wearing a helmet can prevent injuries.'],
+['produce','生産する・作り出す','verb','The farm produces fresh vegetables.'],
+['progress','進歩・進歩する','noun/verb','The project is making good progress.'],
+['protect','守る','verb','We must protect wild animals.'],
+['public','公共の・一般の人々','adj/noun','The library is open to the public.'],
+['publish','出版する・公表する','verb','The results were published online.'],
+['quality','質・品質','noun','The quality of the service improved.'],
+['recognize','認識する・認める','verb','I recognized her voice immediately.'],
+['recommend','勧める','verb','Doctors recommend regular exercise.'],
+['recycle','再利用する','verb','We recycle paper and plastic.'],
+['region','地域','noun','This region is famous for its food.'],
+['relationship','関係','noun','Good communication builds relationships.'],
+['replace','取り替える','verb','We need to replace the old equipment.'],
+['research','研究・研究する','noun/verb','More research is needed.'],
+['respond','返答する・反応する','verb','The company responded to the complaint.'],
+['risk','危険・危険を冒す','noun/verb','Driving too fast increases the risk of accidents.'],
+['role','役割','noun','Parents play an important role in education.'],
+['serious','深刻な・真剣な','adj','Air pollution is a serious problem.'],
+['similar','似ている','adj','The two products are similar.'],
+['society','社会','noun','Technology has changed modern society.'],
+['source','源・情報源','noun','The Internet is a useful source of information.'],
+['specific','具体的な・特定の','adj','Please give a specific example.'],
+['spread','広がる・広げる','verb','The news spread quickly.'],
+['standard','基準・標準の','noun/adj','The school has high standards.'],
+['strategy','戦略・計画','noun','We need a better strategy.'],
+['strength','強さ・長所','noun','Teamwork is one of our strengths.'],
+['structure','構造・構成','noun','The structure of the building is strong.'],
+['technology','科学技術','noun','Technology is changing our lives.'],
+['traditional','伝統的な','adj','They wear traditional clothes at the festival.'],
+['transportation','交通・輸送','noun','Public transportation is convenient.'],
+['treatment','治療・扱い','noun','The patient received medical treatment.'],
+['trend','傾向・流行','noun','This trend is popular among young people.'],
+['valuable','価値のある','adj','The experience was valuable.'],
+['volunteer','ボランティア・自発的に行う','noun/verb','Many people volunteered to help.'],
+['weather','天気','noun','The weather can change quickly.'],
+['whether','〜かどうか','conj','I do not know whether he will come.'],
+['within','〜以内に・〜の中で','prep/adv','Please finish the work within a week.'],
+['would rather','むしろ〜したい','熟語','I would rather stay at home today.'],
+['be interested in','〜に興味がある','熟語','She is interested in science.'],
+['be used to','〜に慣れている','熟語','I am used to getting up early.'],
+['carry out','実行する','熟語','The team carried out the plan.'],
+['come up with','思いつく','熟語','She came up with a good idea.'],
+['find out','調べて分かる','熟語','I found out the truth.'],
+['give up','あきらめる','熟語','Never give up on your goals.'],
+['look forward to','〜を楽しみにする','熟語','I look forward to seeing you.'],
+['make a difference','変化をもたらす','熟語','Small actions can make a difference.'],
+['pay attention to','〜に注意を払う','熟語','Pay attention to the instructions.'],
+['put off','延期する','熟語','They put off the meeting.'],
+['run out of','〜を使い果たす','熟語','We ran out of water.'],
+['set up','設立する・準備する','熟語','They set up a new club.'],
+['take advantage of','〜を利用する','熟語','Take advantage of this opportunity.'],
+['turn out','〜だと分かる・結果になる','熟語','The plan turned out well.'],
+['on the other hand','一方で','熟語','On the other hand, it is expensive.'],
+['in terms of','〜の点では','熟語','The city is large in terms of population.'],
+['rather than','〜よりむしろ','熟語','I prefer tea rather than coffee.'],
+['as long as','〜する限り','熟語','You can stay as long as you are quiet.'],
+['in spite of','〜にもかかわらず','熟語','In spite of the rain, we played.'],
+['so that','〜するために・その結果','熟語','Speak clearly so that everyone can hear.']
+];
+let db=JSON.parse(localStorage.getItem('e2trainer')||'null');
+if(!db)db={items:raw.map((a,i)=>({id:i+1,w:a[0],m:a[1],p:'',pos:a[2],ex:a[3],cat:a[2]==='熟語'?'idiom':'word',st:0,master:false,wrong:0,correct:0,next:0})),goal:100,days:{},sessions:0,correct:0,total:0};
+
+if(db){
+ const known=new Set(db.items.map(x=>String(x.w).toLowerCase()));
+ raw.forEach((a,i)=>{
+  const key=String(a[0]).toLowerCase();
+  if(!known.has(key)){
+   db.items.push({id:Math.max(0,...db.items.map(x=>x.id))+1,w:a[0],m:a[1],p:'',pos:a[2],ex:a[3],cat:a[2]==='熟語'?'idiom':'word',st:0,master:false,wrong:0,correct:0,next:0});
+   known.add(key);
+  }
+ });
+ localStorage.setItem('e2trainer',JSON.stringify(db));
+}
+
+const $=id=>document.getElementById(id),today=()=>new Date().toISOString().slice(0,10),save=()=>{localStorage.setItem('e2trainer',JSON.stringify(db));home();if(window.cloudSyncSave)window.cloudSyncSave()};
+function page(p){document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('on',x.id===p));document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x.dataset.p===p));if(p==='list')renderList();if(p==='record')home()}
+$('nav').onclick=e=>{if(e.target.dataset.p)page(e.target.dataset.p)};
+function home(){let n=db.days[today()]||0;$('today').textContent=n;$('goalText').textContent=db.goal;$('goalBar').style.width=Math.min(100,n/db.goal*100)+'%';$('total').textContent=db.items.length;$('master').textContent=db.items.filter(x=>x.master).length;let d=new Date(),s=0;while(db.days[d.toISOString().slice(0,10)]){s++;d.setDate(d.getDate()-1)}$('streak').textContent=s+'日';$('sessions').textContent=db.sessions;$('correct').textContent=db.correct;$('accuracy').textContent=db.total?Math.round(db.correct/db.total*100)+'%':'--%';$('weaknum').textContent=db.items.filter(x=>x.wrong>=2&&!x.master).length;$('goal').value=db.goal;let y=new Date().getFullYear(),m=new Date().getMonth(),days=new Date(y,m+1,0).getDate();$('calendar').innerHTML=Array.from({length:days},(_,i)=>{let k=y+'-'+String(m+1).padStart(2,'0')+'-'+String(i+1).padStart(2,'0');return `<div class="stat" style="padding:7px;text-align:center"><small>${i+1}日</small><b style="font-size:15px">${db.days[k]||'·'}</b></div>`}).join('')}
+let deck=[],at=0,cur=null;
+function study(mode){deck=db.items.filter(x=>mode==='all'||mode==='random'||(mode==='new'&&!x.master)||(mode==='master'&&x.master)||(mode==='weak'&&!x.master&&x.wrong>0));if(mode==='weak')deck.sort((a,b)=>b.wrong-a.wrong);else deck.sort(()=>Math.random()-.5);at=0;page('study');$('mode').textContent=({all:'すべて学習',new:'未マスター',weak:'苦手克服',master:'マスター復習',random:'ランダム'}[mode]);next()}
+function next(){cur=deck[at];if(!cur){$('term').textContent='このモードは終了！';$('back').classList.add('hide');$('reveal').classList.add('hide');$('know').classList.add('hide');$('miss').classList.add('hide');$('pos').textContent=deck.length+'語完了';$('sbar').style.width='100%';return}$('term').textContent=cur.w;$('pron').textContent=cur.p||'';$('meaning').textContent=cur.m;$('example').textContent=cur.ex||'';$('detail').textContent=(cur.master?'マスター済み':'連続正解 '+cur.st+'/3')+' ・ '+cur.pos;$('pos').textContent=(at+1)+' / '+deck.length;$('sbar').style.width=(at/deck.length*100)+'%';$('back').classList.add('hide');$('reveal').classList.remove('hide');$('know').classList.add('hide');$('miss').classList.add('hide');$('note').textContent=''}
+function reveal(){$('back').classList.remove('hide');$('reveal').classList.add('hide');$('know').classList.remove('hide');$('miss').classList.remove('hide')}
+function speak(){if(cur&&speechSynthesis){let u=new SpeechSynthesisUtterance(cur.w);u.lang='en-US';speechSynthesis.speak(u)}}
+function grade(ok){cur.next=Date.now()+86400000;if(ok){cur.correct++;cur.st++;db.correct++;if(cur.st>=3)cur.master=true}else{cur.wrong++;cur.st=0;cur.master=false}db.total++;db.days[today()]=(db.days[today()]||0)+1;save();at++;next()}
+let questions=[],qi=0,score=0;
+function test(n){n=n||Number($('num').value);questions=[...db.items].sort(()=>Math.random()-.5).slice(0,n);qi=0;score=0;page('test');ask()}
+function ask(){if(qi>=questions.length){db.sessions++;save();$('quiz').innerHTML=`<h2>結果：${score}/${questions.length}問</h2><p>正答率 ${Math.round(score/questions.length*100)}%</p><button onclick="test()">もう一度</button>`;return}let x=questions[qi],opts=[x,...db.items.filter(a=>a.id!==x.id).sort(()=>Math.random()-.5).slice(0,3)].sort(()=>Math.random()-.5);$('quiz').innerHTML=`<p>${qi+1}/${questions.length}問</p><div class="big">${safe(x.w)}</div><p>意味を選んでね</p>`+opts.map(o=>`<button class="answer" data-id="${o.id}">${safe(o.m)}</button>`).join('')+'<div id="feedback"></div>';$('quiz').querySelectorAll('button.answer').forEach(b=>b.onclick=()=>{let ok=Number(b.dataset.id)===x.id;if(ok){score++;db.correct++;x.correct++}else{x.wrong++;x.st=0;x.master=false}if(ok){x.st++;if(x.st>=3)x.master=true}db.total++;db.days[today()]=(db.days[today()]||0)+1;save();$('feedback').innerHTML=`<p>${ok?'正解！':'不正解。正解：'+safe(x.m)}</p><button class="primary" onclick="qi++;ask()">次へ</button>`;$('quiz').querySelectorAll('button.answer').forEach(z=>z.disabled=true)})}
+function renderList(){let s=$('search').value.toLowerCase(),f=$('filter').value,c=$('cat').value;let a=db.items.filter(x=>(!s||x.w.toLowerCase().includes(s)||x.m.includes(s))&&(f==='all'||f==='new'&&!x.master||f==='master'&&x.master||f==='weak'&&x.wrong>=2||f==='due'&&x.next<=Date.now())&&(c==='all'||x.cat===c));$('listbody').innerHTML=a.map(x=>`<div class="item"><b>${safe(x.w)}</b> <span class="tag">${x.master?'マスター済み':'学習中'}</span><div class="muted">${safe(x.m)} ・ 連続正解${x.st}/3 ・ ミス${x.wrong}</div><button onclick="studyOne(${x.id})">この単語を復習</button></div>`).join('')||'見つかりません'}
+function studyOne(id){deck=[db.items.find(x=>x.id===id)];at=0;page('study');$('mode').textContent='単語を復習';next()}
+function saveGoal(){db.goal=Math.max(5,Math.min(500,Number($('goal').value)||100));save()}
+function add(){let w=$('addterm').value.trim(),m=$('addmean').value.trim();if(!w||!m)return alert('英語と意味を入力してね');db.items.push({id:Math.max(0,...db.items.map(x=>x.id))+1,w,m,p:$('addpron').value,pos:$('addcat').value==='idiom'?'熟語':'追加',ex:$('addex').value,cat:$('addcat').value,st:0,master:false,wrong:0,correct:0,next:0});['addterm','addmean','addpron','addex'].forEach(x=>$(x).value='');save();alert('追加しました')}
+function backup(){let a=document.createElement('a'),u=URL.createObjectURL(new Blob([JSON.stringify(db)],{type:'application/json'}));a.href=u;a.download='eiken2-backup.json';a.click();URL.revokeObjectURL(u)}
+function restore(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let d=JSON.parse(r.result);if(!d.items||!d.days)throw 0;db=d;save();alert('復元しました')}catch(_){alert('ファイルを読み込めません')}};r.readAsText(f)}
+function safe(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+home();
+window.getE2TrainerDB = () => db;
+window.setE2TrainerDB = (nextDB) => {
+  if (!nextDB || !Array.isArray(nextDB.items) || !nextDB.days || typeof nextDB.days !== 'object') {
+    throw new Error('クラウドデータの形式が正しくありません');
+  }
+  db = nextDB;
+  save();
+};
+</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDyR2B2bsECJbwEMyRenzjcUHAbmKjcgDo",
+  authDomain: "eitango-92e12.firebaseapp.com",
+  projectId: "eitango-92e12",
+  storageBucket: "eitango-92e12.firebasestorage.app",
+  messagingSenderId: "859145269376",
+  appId: "1:859145269376:web:508a26768ea2262756b665"
+};
+
+const statusEl = document.getElementById("cloudStatus");
+const loginBtn = document.getElementById("googleLoginBtn");
+const syncBtn = document.getElementById("cloudSyncBtn");
+const logoutBtn = document.getElementById("googleLogoutBtn");
+let auth, dbCloud, currentUser = null, stopListening = null;
+let applyingRemote = false, saveTimer = null;
+
+function status(message) { if (statusEl) statusEl.textContent = message; }
+function progressRef(uid) { return doc(dbCloud, "users", uid, "progress", "main"); }
+
+async function uploadLocal() {
+  if (!currentUser || applyingRemote) return;
+  const local = window.getE2TrainerDB?.();
+  if (!local) return;
+  await setDoc(progressRef(currentUser.uid), {
+    data: local,
+    updatedAt: serverTimestamp()
+  });
+  status("同期済み：この端末の学習記録をクラウドに保存しました。");
+}
+
+async function syncNow() {
+  if (!currentUser) {
+    status("先にGoogleアカウントでログインしてな。");
+    return;
+  }
+  try {
+    const snap = await getDoc(progressRef(currentUser.uid));
+    if (snap.exists() && snap.data()?.data) {
+      applyingRemote = true;
+      window.setE2TrainerDB(snap.data().data);
+      applyingRemote = false;
+      status("クラウドの学習記録をこの端末に読み込みました。");
+    } else {
+      await uploadLocal();
+    }
+  } catch (err) {
+    applyingRemote = false;
+    status("同期エラー：" + (err?.message || String(err)));
+  }
+}
+
+window.cloudSyncSave = () => {
+  if (!currentUser || applyingRemote) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => uploadLocal().catch(err => status("保存エラー：" + (err?.message || String(err)))), 1200);
+};
+
+loginBtn?.addEventListener("click", async () => {
+  try {
+    const provider = new GoogleAuthProvider();
+    if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+      await signInWithRedirect(auth, provider);
+    } else {
+      await signInWithPopup(auth, provider);
+    }
+  } catch (err) {
+    status("ログインエラー：" + (err?.message || String(err)));
+  }
+});
+
+syncBtn?.addEventListener("click", syncNow);
+logoutBtn?.addEventListener("click", async () => {
+  try { await signOut(auth); } catch (err) { status("ログアウトエラー：" + (err?.message || String(err))); }
+});
+
+try {
+  const app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  dbCloud = getFirestore(app);
+  await getRedirectResult(auth);
+  onAuthStateChanged(auth, async user => {
+    currentUser = user;
+    if (stopListening) { stopListening(); stopListening = null; }
+    if (!user) {
+      status("未ログイン。Googleでログインすると同期できます。");
+      return;
+    }
+    status(user.email + " でログイン中。学習記録を確認しています…");
+    await syncNow();
+    stopListening = onSnapshot(progressRef(user.uid), snap => {
+      if (!snap.exists() || !snap.data()?.data) return;
+      // Realtime updates from another device. Avoid applying our own immediate echo.
+      const remote = snap.data().data;
+      const local = window.getE2TrainerDB?.();
+      if (local && JSON.stringify(local) !== JSON.stringify(remote)) {
+        applyingRemote = true;
+        window.setE2TrainerDB(remote);
+        applyingRemote = false;
+        status(user.email + " と同期中（最新のクラウド記録を反映）。");
+      }
+    }, err => status("同期監視エラー：" + (err?.message || String(err))));
+  });
+} catch (err) {
+  status("Firebase初期化エラー：" + (err?.message || String(err)));
+}
+</script>
+</html>
